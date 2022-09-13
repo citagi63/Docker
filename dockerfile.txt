@@ -1,0 +1,27 @@
+FROM python:3.9-alpine
+
+ENV PYTHONDONTWRITEBYTECODE 1
+
+ENV PYTHONUNBUFFERED 1
+
+ENV APP_DIR /project
+
+RUN apk update \
+    && apk add --no-cache --virtual .build-deps \
+    ca-certificates make gcc linux-headers musl-dev \
+    libffi-dev libc-dev postgresql-dev curl
+
+WORKDIR ${APP_DIR}
+
+COPY ./requirements.txt ${APP_DIR}/requirements.txt
+
+RUN pip install --no-cache-dir --upgrade -r ${APP_DIR}/requirements.txt
+
+COPY . ${APP_DIR}
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:8000/api/health-check || kill 1
+
+ENTRYPOINT ["uvicorn", "main:app", "--host", "0.0.0.0"]
